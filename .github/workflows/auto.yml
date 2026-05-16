@@ -1,0 +1,112 @@
+name: Build & Release cloudflared
+
+# 仅手动触发
+on:
+  workflow_dispatch:
+
+# 确保 GITHUB_TOKEN 有权限创建 Release
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      # 只保留合法的 GOOS/GOARCH 组合
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: mipsle
+          - goos: windows
+            goarch: amd64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      # 拉取仓库
+      - uses: actions/checkout@v3
+
+      # 安装 Go
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.22.5
+
+      # 编译二进制
+      - name: Build cloudflared
+        run: |
+          BUILD_DIR=build/${{ matrix.goos }}_${{ matrix.goarch }}
+          mkdir -p $BUILD_DIR
+
+          OUTPUT=$BUILD_DIR/cloudflared
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            OUTPUT=${OUTPUT}.exe
+          fi
+
+          echo "编译 ${{ matrix.goos }}/ ${{ matrix.goarch }} ..."
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 go build -o $OUTPUT ./cmd/cloudflared
+
+      # 上传 Artifact（调试/缓存用，可选）
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloudflared-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/${{ matrix.goos }}_${{ matrix.goarch }}/cloudflared*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # 下载 build job 的 artifact
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build
+
+      # 准备 Release 文件并压缩
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+
+          # Linux amd64
+          cp build/linux_amd64/cloudflared release/cloudflared-linux-amd64
+          chmod +x release/cloudflared-linux-amd64
+          tar -czvf release/cloudflared-linux-amd64.tar.gz -C release cloudflared-linux-amd64
+          rm release/cloudflared-linux-amd64
+
+          # Linux mipsle
+          cp build/linux_mipsle/cloudflared release/cloudflared-linux-mipsle
+          chmod +x release/cloudflared-linux-mipsle
+          tar -czvf release/cloudflared-linux-mipsle.tar.gz -C release cloudflared-linux-mipsle
+          rm release/cloudflared-linux-mipsle
+
+          # macOS amd64
+          cp build/darwin_amd64/cloudflared release/cloudflared-macos-amd64
+          chmod +x release/cloudflared-macos-amd64
+          tar -czvf release/cloudflared-macos-amd64.tar.gz -C release cloudflared-macos-amd64
+          rm release/cloudflared-macos-amd64
+
+          # macOS arm64
+          cp build/darwin_arm64/cloudflared release/cloudflared-macos-arm64
+          chmod +x release/cloudflared-macos-arm64
+          tar -czvf release/cloudflared-macos-arm64.tar.gz -C release cloudflared-macos-arm64
+          rm release/cloudflared-macos-arm64
+
+          # Windows amd64
+          cp build/windows_amd64/cloudflared.exe release/cloudflared-windows-amd64.exe
+          powershell Compress-Archive -Path release/cloudflared-windows-amd64.exe -DestinationPath release/cloudflared-windows-amd64.zip
+          rm release/cloudflared-windows-amd64.exe
+
+      # 创建 GitHub Release 并上传文件
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
