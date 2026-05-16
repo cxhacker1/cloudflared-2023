@@ -30,32 +30,33 @@ jobs:
       - name: Build cloudflared
         run: |
           mkdir -p build/linux_amd64
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/linux_amd64/cloudflared-linux-amd64 ./cmd/cloudflared
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/linux_amd64/cloudflared-linux-amd64 ./cmd/cloudflared
 
           mkdir -p build/linux_arm64
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o build/linux_arm64/cloudflared-linux-arm64 ./cmd/cloudflared
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/linux_arm64/cloudflared-linux-arm64 ./cmd/cloudflared
 
           mkdir -p build/linux_mipsle
-          GOOS=linux GOARCH=mipsle CGO_ENABLED=0 go build -o build/linux_mipsle/cloudflared-linux-mipsle ./cmd/cloudflared
+          GOOS=linux GOARCH=mipsle CGO_ENABLED=0 go build -ldflags "-s -w" -o build/linux_mipsle/cloudflared-linux-mipsle ./cmd/cloudflared
 
           mkdir -p build/windows_amd64
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o build/windows_amd64/cloudflared-windows-amd64.exe ./cmd/cloudflared
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/windows_amd64/cloudflared-windows-amd64.exe ./cmd/cloudflared
 
           mkdir -p build/windows_arm64
-          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -o build/windows_arm64/cloudflared-windows-arm64.exe ./cmd/cloudflared
+          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/windows_arm64/cloudflared-windows-arm64.exe ./cmd/cloudflared
 
           mkdir -p build/darwin_amd64
-          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o build/darwin_amd64/cloudflared-darwin-amd64 ./cmd/cloudflared
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/darwin_amd64/cloudflared-darwin-amd64 ./cmd/cloudflared
 
           mkdir -p build/darwin_arm64
-          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o build/darwin_arm64/cloudflared-darwin-arm64 ./cmd/cloudflared
-
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/darwin_arm64/cloudflared-darwin-arm64 ./cmd/cloudflared
+      
       # 4. 创建 Release
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
