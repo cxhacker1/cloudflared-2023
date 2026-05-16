@@ -35,7 +35,7 @@ jobs:
       # 安装 Go
       - uses: actions/setup-go@v4
         with:
-          go-version: 1.22.5
+          go-version: 1.20.14
 
       # 编译二进制
       - name: Build cloudflared
