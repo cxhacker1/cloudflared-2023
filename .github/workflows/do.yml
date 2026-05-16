@@ -1,0 +1,99 @@
+name: Build cloudflared
+
+on:
+  push:
+    tags:
+      - 'v*'   # 只有 push 以 v 开头的 tag 才触发 release
+  
+ # 触发方式 B：手动触发，可输入 tag
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+
+  
+# 确保 GITHUB_TOKEN 有权限创建 Release
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      #  拉取仓库
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 设置 Go 环境
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.14
+
+      # 编译各平台
+      - name: Build multiple platforms
+        run: |
+          set -e  # 出错立即停止
+
+          # Linux amd64
+          BUILD_DIR=build/linux_amd64
+          mkdir -p $BUILD_DIR
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared ./cmd/cloudflared
+          
+
+          # Linux arm64
+          BUILD_DIR=build/linux_arm64
+          mkdir -p $BUILD_DIR
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared ./cmd/cloudflared
+          
+
+          # Linux mipsle
+          BUILD_DIR=build/linux_mipsle
+          mkdir -p $BUILD_DIR
+          GOOS=linux GOARCH=mipsle CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared ./cmd/cloudflared
+          
+
+          # Windows amd64
+          BUILD_DIR=build/windows_amd64
+          mkdir -p $BUILD_DIR
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared.exe ./cmd/cloudflared
+          
+
+          # Windows arm64
+          BUILD_DIR=build/windows_arm64
+          mkdir -p $BUILD_DIR
+          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared.exe ./cmd/cloudflared
+          
+
+          # macOS amd64
+          BUILD_DIR=build/darwin_amd64
+          mkdir -p $BUILD_DIR
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared ./cmd/cloudflared
+          
+
+          # macOS arm64
+          BUILD_DIR=build/darwin_arm64
+          mkdir -p $BUILD_DIR
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o $BUILD_DIR/cloudflared ./cmd/cloudflared
+          
+
+      # 上传 artifact（可在 Actions 页面下载）
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflared-binaries
+          path: build/
+
+      # 创建 GitHub Release 并上传编译文件
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.event.ref_name || github.event.inputs.tag }}
+          files: build/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
