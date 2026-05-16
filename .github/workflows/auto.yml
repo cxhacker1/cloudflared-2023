@@ -1,4 +1,4 @@
-name: Build & Release cloudflared
+name: Build cloudflared
 
 # 仅手动触发
 on:
@@ -73,41 +73,31 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          path: build
+          path: release-files
 
       # 准备 Release 文件并压缩
       - name: Prepare release files
         run: |
           mkdir -p release
+          
+          for FILE in release-files/*/*; do
+            BASENAME=$(basename "$FILE")
+            OS_ARCH=$(basename $(dirname "$FILE"))
+            if [[ "$BASENAME" == *".exe" ]]; then
+              # Windows 压缩为 zip
+              zip -j "release/${BASENAME%.exe}.zip" "$FILE"
+            else
+              # Linux/macOS 压缩为 tar.gz
+              cp "$FILE" "release/${OS_ARCH}-${BASENAME}"
+              chmod +x "release/${OS_ARCH}-${BASENAME}"
+              tar -czvf "release/${OS_ARCH}-${BASENAME}.tar.gz" -C release "${OS_ARCH}-${BASENAME}"
+              rm "release/${OS_ARCH}-${BASENAME}"
+            fi
+          done
 
-          # Linux amd64
-          cp build/linux_amd64/cloudflared release/cloudflared-linux-amd64
-          chmod +x release/cloudflared-linux-amd64
-          tar -czvf release/cloudflared-linux-amd64.tar.gz -C release cloudflared-linux-amd64
-          rm release/cloudflared-linux-amd64
-
-          # Linux mipsle
-          cp build/linux_mipsle/cloudflared release/cloudflared-linux-mipsle
-          chmod +x release/cloudflared-linux-mipsle
-          tar -czvf release/cloudflared-linux-mipsle.tar.gz -C release cloudflared-linux-mipsle
-          rm release/cloudflared-linux-mipsle
-
-          # macOS amd64
-          cp build/darwin_amd64/cloudflared release/cloudflared-macos-amd64
-          chmod +x release/cloudflared-macos-amd64
-          tar -czvf release/cloudflared-macos-amd64.tar.gz -C release cloudflared-macos-amd64
-          rm release/cloudflared-macos-amd64
-
-          # macOS arm64
-          cp build/darwin_arm64/cloudflared release/cloudflared-macos-arm64
-          chmod +x release/cloudflared-macos-arm64
-          tar -czvf release/cloudflared-macos-arm64.tar.gz -C release cloudflared-macos-arm64
-          rm release/cloudflared-macos-arm64
-
-          # Windows amd64
-          cp build/windows_amd64/cloudflared.exe release/cloudflared-windows-amd64.exe
-          powershell Compress-Archive -Path release/cloudflared-windows-amd64.exe -DestinationPath release/cloudflared-windows-amd64.zip
-          rm release/cloudflared-windows-amd64.exe
+          echo " Release 文件列表: "
+          ls -lh release
+        
 
       # 创建 GitHub Release 并上传文件
       - name: Create GitHub Release
