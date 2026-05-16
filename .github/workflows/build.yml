@@ -1,0 +1,63 @@
+name: Build cloudflared
+
+on:
+  push:
+    tags:
+      - 'v*'   # 仅在打 tag 时触发
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GOOS: linux
+      GOARCH: mipsle
+      CGO_ENABLED: 0
+    steps:
+      - name: Checkout code      # 获取源码
+        uses: actions/checkout@v3
+
+      - name: Set up Go          # 设置 go 版本
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.14'  # Cloudflared 2023-10.0 推荐版本
+
+      - name: Install Go dependencies
+        run: go mod download
+
+      - name: Build cloudflared
+        run: |
+          mkdir -p build
+          go build -ldflags "-s -w" -o build/cloudflared ./cmd/cloudflared
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: cloudflared
+          path: build/cloudflared
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: cloudflared
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: "cloudflared linux mipsle build"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/cloudflared
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
