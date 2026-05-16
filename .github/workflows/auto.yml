@@ -50,6 +50,12 @@ jobs:
 
           echo "编译 ${{ matrix.goos }}/ ${{ matrix.goarch }} ..."
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 go build -o $OUTPUT ./cmd/cloudflared
+          
+          if [ ! -f "$OUTPUT" ]; then
+          echo "编译失败，文件不存在: $OUTPUT"
+            exit 1
+          fi
+          echo "编译成功: $OUTPUT"
 
       # 上传 Artifact（调试/缓存用，可选）
       - uses: actions/upload-artifact@v4
