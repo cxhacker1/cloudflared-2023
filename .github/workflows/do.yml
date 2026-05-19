@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'   # 只有 push 以 v 开头的 tag 才触发 release
+      - '*'   # 只有 push 以 v 开头的 tag 才触发 release
   workflow_dispatch: # 手动触发
 
 # 确保 GITHUB_TOKEN 有权限创建 Release
