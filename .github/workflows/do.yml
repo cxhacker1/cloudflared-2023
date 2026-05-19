@@ -51,6 +51,12 @@ jobs:
           mkdir -p build/darwin_arm64
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w" -o build/darwin_arm64/cloudflared-darwin-arm64 ./cmd/cloudflared
       
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cloudflared-Packages
+          path: build/**/*
+      
       # 4. 创建 Release
       - name: Create GitHub Release
         id: create_release
