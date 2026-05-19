@@ -60,6 +60,7 @@ jobs:
       
       # 5. 创建 Release
       - name: Create GitHub Release
+        if: ${{ github.event_name == 'push' }}
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
@@ -70,6 +71,7 @@ jobs:
 
       # 6. 上传 build 下所有文件到 Release
       - name: Upload Release Assets
+        if: ${{ github.event_name == 'push' }}
         uses: softprops/action-gh-release@v1
         with:
           files: build/**/*   # 上传 build 目录下所有文件
